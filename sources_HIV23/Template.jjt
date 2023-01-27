@@ -167,23 +167,23 @@ void Stmt() #void : { }
 	DoWhileStmt() |
 	IfStmt() |
 	ForStmt() |
-	FunctionStmt() |
-	ReturnStmt()
+	FunctionStmt()
 }
 
-void WhileStmt() : { Token t;}
+void InFunctionBlock() #void : { }
 {
-    <WHILE> <LPAREN> Expr()#WhileCond <RPAREN> (<LACC> Block() <RACC> | Stmt())#WhileBlock
+    ( InFunctionStmt() )* [ReturnStmt()]
 }
 
-void DoWhileStmt() : { Token t;} {
-    <DO> <LACC> Block()#WhileBlock <RACC> <WHILE> <LPAREN> Expr()#WhileCond <RPAREN> <SEMICOLON>
-}
-
-void IfStmt() : { Token t;}
+void InFunctionStmt() #void : { }
 {
-    <IF> <LPAREN> Expr()#IfCond <RPAREN> BlockStmt()#IfBlock [LOOKAHEAD(2) <ELSE> BlockStmt()#ElseBlock]
+    AssignStmt() <SEMICOLON> |
+    InFunctionWhileStmt() |
+    InFunctionDoWhileStmt() |
+    InFunctionIfStmt() |
+    InFunctionForStmt()
 }
+
 
 void BlockStmt() #void : { }
 {
@@ -191,9 +191,49 @@ void BlockStmt() #void : { }
     Stmt()
 }
 
+void InFunctionBlockStmt() #void : { }
+{
+    <LACC> InFunctionBlock() <RACC> |
+    InFunctionStmt() |
+    ReturnStmt()
+}
+
+void WhileStmt() : { Token t;}
+{
+    <WHILE> <LPAREN> Expr()#WhileCond <RPAREN> BlockStmt()#WhileBlock
+}
+
+void InFunctionWhileStmt() #WhileStmt : { Token t;}
+{
+    <WHILE> <LPAREN> Expr()#WhileCond <RPAREN> InFunctionBlockStmt()#WhileBlock
+}
+
+void DoWhileStmt() : { Token t;} {
+    <DO> <LACC> Block()#WhileBlock <RACC> <WHILE> <LPAREN> Expr()#WhileCond <RPAREN> <SEMICOLON>
+}
+
+void InFunctionDoWhileStmt() #DoWhileStmt : { Token t;} {
+    <DO> <LACC> InFunctionBlock()#WhileBlock <RACC> <WHILE> <LPAREN> Expr()#WhileCond <RPAREN> <SEMICOLON>
+}
+
+void IfStmt() : { Token t;}
+{
+    <IF> <LPAREN> Expr()#IfCond <RPAREN> BlockStmt()#IfBlock [LOOKAHEAD(2) <ELSE> BlockStmt()#ElseBlock]
+}
+
+void InFunctionIfStmt() #IfStmt : { Token t;}
+{
+    <IF> <LPAREN> Expr()#IfCond <RPAREN> InFunctionBlockStmt()#IfBlock [LOOKAHEAD(2) <ELSE> InFunctionBlockStmt()#ElseBlock]
+}
+
 void ForStmt() : { Token t;}
 {
     <FOR> <LPAREN> [AssignStmt()] <SEMICOLON> [Expr()] <SEMICOLON> [AssignStmt()] <RPAREN> BlockStmt()
+}
+
+void InFunctionForStmt() #ForStmt : { Token t;}
+{
+    <FOR> <LPAREN> [AssignStmt()] <SEMICOLON> [Expr()] <SEMICOLON> [AssignStmt()] <RPAREN> InFunctionBlockStmt()
 }
 
 void ReturnStmt() : { Token t;}
@@ -203,7 +243,7 @@ void ReturnStmt() : { Token t;}
 
 void FunctionStmt() : { Token t;}
 {
-    <FUNC> Identifier() <LPAREN> [Identifier() (<COMMA> Identifier())*] <RPAREN> <LACC> Block() <RACC>
+    <FUNC> Identifier() <LPAREN> [Identifier() (<COMMA> Identifier())*] <RPAREN> <LACC> InFunctionBlock() <RACC>
 }
 
 void AssignStmt() : { Token t;}
